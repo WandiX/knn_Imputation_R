@@ -25,21 +25,20 @@ test_of_samedist <-function(dataset, dadj_val){
   }
   
 # Normalization of data
-norml <- function(dataset){
-    for (i in 1:ncol(dataset)){
-        for (j in 1:nrow(dataset){
-            temp <- c()
-            if (is.NA(dataset[j, i])){
-                append(temp, NA)
+norml <- function(test){
+    norml_dataset <- c()
+    for (i in 1:ncol(test)){
+        temp <- c()
+        for (j in 1:nrow(test)){
+            if (is.na(test[j, i])){
+                temp <- append(temp, NA)
             }else{
-                append(temp, (dataset[j,i] - min(dataset[,i]))/(max(dataset[,i]) - min(dataset[,i])) )
+                temp <- append(temp, (test[j,i] - min(na.omit(test[,i])))/(max(na.omit(test[,i])) - min(na.omit(test[,i]))) )
             }
         }
         norml_dataset <- cbind(norml_dataset, temp)
     }
     return (norml_dataset)
-}
-
 }
 
 
