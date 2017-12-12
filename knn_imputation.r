@@ -1,4 +1,4 @@
-
+source('kstest+selectvariable.R')
 #knn_imputation: Compute the knn imputation values for dataset
 #k: the number of closest elements used (If k < 1 or k > number of rows in dataset, k will be set using the number of rows in dataset)
 #method:  
@@ -61,6 +61,7 @@ get_quad_val <- function(dataset, posNA, L, k, method) {
         quad_order <- res
     }
     for (i in 1:nrow_pos) {
+    
         if (!is.list(quad_order))    #When there is only one missing value
             li <- quad_order
         else
@@ -224,6 +225,7 @@ get_dist_matrix <- function(ds, posNA) {
         row_ds <- ds[row_pos[1],-row_pos[2]]
         ds_rm <- ds[-row_pos[1],-row_pos[2]]
         ds_rm <- ds_rm[complete.cases(ds_rm),]
+        ds_norml <- norml(ds_rm)
         res_row <- apply(ds_rm, 1, compute_dist, row1=row_ds)
         rows <- strtoi(rownames(data.frame(res_row)))
         res[r, rows] <- res_row  
@@ -247,9 +249,11 @@ get_quad_order <- function(ds, posNA, k) {
         row_ <- ds[curr[1],-curr[2]]
         ds_rm <- ds[-curr[1], -curr[2]]
         ds_rm <- ds_rm[complete.cases(ds_rm),]
+        
         val <- do.call(rbind, apply(ds_rm, 1, "-", row_))
-        sqrtSum <- apply(val, 1, sqrt_sum)
-        quad_vec <- do.call(rbind, apply(val, 1, get_quad))
+        val_norml <- norml(val)
+        sqrtSum <- apply(val_norml, 1, sqrt_sum)
+        quad_vec <- do.call(rbind, apply(val_norml, 1, get_quad))
         quad_list <- get_quad_list(sqrtSum, quad_vec)
         quad_list <- lapply(quad_list, sort)
         if (k != 0) quad_list <- lapply(quad_list, intercept_k_quad, k=k)
@@ -272,7 +276,7 @@ intercept_k_quad <- function(li, k) {
 
 #Get the lists of quadrants and divide data
 get_quad_list <- function(sqrtSum, quad_vec) {
-
+    
     row_num <- NULL
     if (is.vector(quad_vec))
         row_num <- 1
