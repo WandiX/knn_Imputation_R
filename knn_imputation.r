@@ -16,8 +16,9 @@ knn_imputation <- function(dataset, k=0, method='weighted', distance='euclidean'
     #Get the positions of NA
     posNA <- which(is.na(dataset), arr.ind=TRUE)
     nrow_pos <- nrow(posNA)
-    if (nrow_pos == 0 || is.vector(dataset)) return(dataset)
+    if (nrow_pos == 0 || is.vector(dataset)) return(NULL)
     
+    #print("111")
     ds_row <- nrow(dataset)
     if (k > ds_row) k <- ds_row
     if (k < 1) k <- ds_row
@@ -31,7 +32,7 @@ knn_imputation <- function(dataset, k=0, method='weighted', distance='euclidean'
     if (distance != "euclidean") return(NULL)
     dm <- get_dist_matrix(dataset, posNA)
     d_order <- NULL
-    if (is.vector(d_order))
+    if (is.vector(dm))
         d_order <- order(dm, na.last=NA)
     else
         d_order <- apply(dm, 1, order, na.last=NA)
@@ -149,6 +150,7 @@ get_estimate_value <- function(method, dataset, d_order, posNA, dm) {
             pos <- posNA[i,]
         
         ds_use <- dataset[ord, pos[2]]
+        ds_use <- ds_use[!is.na(ds_use)]
         if (ig) {
             dataset[pos[1], pos[2]] <- ds_use
         }
@@ -159,7 +161,8 @@ get_estimate_value <- function(method, dataset, d_order, posNA, dm) {
                 if (is.vector(weight))
                     w <- weight
                 else
-                    w <- weight[i,]            
+                    w <- weight[i,]
+                w[is.nan(w)] = 0
                 est <- sum(ds_use*w)
             }
             else {
@@ -223,8 +226,9 @@ get_dist_matrix <- function(ds, posNA) {
     for (r in 1:row_num) {
         row_pos <- posNA[r,]
         row_ds <- ds[row_pos[1],-row_pos[2]]
-        ds_rm <- ds[-row_pos[1],-row_pos[2]]
+        ds_rm <- ds[-posNA[,1],-row_pos[2]]
         ds_rm <- ds_rm[complete.cases(ds_rm),]
+        #ds_rm <- ds_rm[complete.cases(ds_rm),]
         ds_norml <- norml(ds_rm)
         res_row <- apply(ds_rm, 1, compute_dist, row1=row_ds)
         rows <- strtoi(rownames(data.frame(res_row)))
