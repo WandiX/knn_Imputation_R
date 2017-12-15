@@ -18,7 +18,6 @@ knn_imputation <- function(dataset, k=0, method='weighted', distance='euclidean'
     nrow_pos <- nrow(posNA)
     if (nrow_pos == 0 || is.vector(dataset)) return(NULL)
     
-    #print("111")
     ds_row <- nrow(dataset)
     if (k > ds_row) k <- ds_row
     if (k < 1) k <- ds_row
@@ -62,12 +61,11 @@ get_quad_val <- function(dataset, posNA, L, k, method) {
         quad_order <- res
     }
     for (i in 1:nrow_pos) {
-    
+        li <- NULL
         if (!is.list(quad_order))    #When there is only one missing value
             li <- quad_order
         else
             li <- quad_order[[i]]
-
         col_ind <- names(li)
         if (nrow_pos == 1) {
             col_val<-dataset[col_ind, posNA[2]]
@@ -77,6 +75,7 @@ get_quad_val <- function(dataset, posNA, L, k, method) {
                     t_ <- 1 / li
                     t_sum <- sum(t_)
                     weight <- t_ / t_sum
+                    weight[is.nan(weight)] = 0
                     dataset[posNA[1], posNA[2]] <- sum(weight * col_val)
                 }
                 else {
@@ -92,10 +91,11 @@ get_quad_val <- function(dataset, posNA, L, k, method) {
                     t_ <- 1 / li
                     t_sum <- sum(t_)
                     weight <- t_ / t_sum
+                    weight[is.nan(weight)] = 0
                     dataset[posNA[i,1], posNA[i,2]] <- sum(weight * col_val)
                 }
                 else {
-                    dataset[posNA[i,1], posNA[i,2]] <- mean(col_val)
+                    dataset[posNA[i,1], posNA[i,2]] <- mean(col_val, na.rm = TRUE)
                 }
             }
         }
@@ -228,7 +228,6 @@ get_dist_matrix <- function(ds, posNA) {
         row_ds <- ds[row_pos[1],-row_pos[2]]
         ds_rm <- ds[-posNA[,1],-row_pos[2]]
         ds_rm <- ds_rm[complete.cases(ds_rm),]
-        #ds_rm <- ds_rm[complete.cases(ds_rm),]
         ds_norml <- norml(ds_rm)
         res_row <- apply(ds_rm, 1, compute_dist, row1=row_ds)
         rows <- strtoi(rownames(data.frame(res_row)))
@@ -240,6 +239,7 @@ get_dist_matrix <- function(ds, posNA) {
 
 #Divide quadrants and get close data points for each incomplete data point
 get_quad_order <- function(ds, posNA, k) {
+
     row_num <- 1
     if (is.matrix(posNA))
         row_num <- nrow(posNA)
@@ -251,24 +251,18 @@ get_quad_order <- function(ds, posNA, k) {
         else
             curr <- posNA[r,]
         row_ <- ds[curr[1],-curr[2]]
-        ds_rm <- ds[-curr[1], -curr[2]]
+        ds_rm <- ds[-posNA[,1], -curr[2]]
         ds_rm <- ds_rm[complete.cases(ds_rm),]
-        
         val <- do.call(rbind, apply(ds_rm, 1, "-", row_))
-        val_norml <- norml(val)
-        sqrtSum <- apply(val_norml, 1, sqrt_sum)
-        quad_vec <- do.call(rbind, apply(val_norml, 1, get_quad))
+        sqrtSum <- apply(val, 1, sqrt_sum)
+        quad_vec <- do.call(rbind, apply(val, 1, get_quad))
         quad_list <- get_quad_list(sqrtSum, quad_vec)
         quad_list <- lapply(quad_list, sort)
         if (k != 0) quad_list <- lapply(quad_list, intercept_k_quad, k=k)
         merged_list <- unlist(quad_list)
-        if (is.null(lists)) {
-            lists <- merged_list
-        }
-        else {
-            lists <- list(lists, merged_list)
-        }
+        lists[[r]] <- merged_list
     }
+
     return(lists)
 }
 
@@ -287,9 +281,9 @@ get_quad_list <- function(sqrtSum, quad_vec) {
     else
         row_num <- nrow(quad_vec)
     
-    quad_list <- NULL;
+    quad_list <- list();
     rowNames <- row.names(quad_vec)
-
+    i = 1
     while (row_num > 0) {
         if (is.vector(quad_vec))
             curr <- quad_vec
@@ -326,11 +320,8 @@ get_quad_list <- function(sqrtSum, quad_vec) {
             }
         }
         
-        if (is.null(quad_list))
-            quad_list <- li
-        else
-            quad_list <- list(quad_list, li)
-        
+        quad_list[[i]] <- li
+        i <- i+1
     }
 
     return(quad_list)
